@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 :<<=
 ==Laravel
 =
@@ -11,7 +12,7 @@ function install_laravel {
 
     #install
     echo_y "Installing..."
-    cd ~
+    cd ~ || exit
     rm -rf ~/public_html
     mkdir -p ~/.local/bin
     mkdir -p ~/.local/etc

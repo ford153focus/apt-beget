@@ -8,7 +8,7 @@ function apt_localinstall {
     prepare_folders
 
     mkdir -p $HOME/.beget/tmp/dpkg
-    cd $HOME/.beget/tmp/dpkg
+    cd $HOME/.beget/tmp/dpkg || exit
 
     #download
     echo_y "Downloading..."
@@ -16,11 +16,7 @@ function apt_localinstall {
 
     #install
     echo_y "Installing..."
-    for deb in `find . -name '*.deb'`
-    do
-        echo $deb
-        dpkg -x $deb $HOME/.beget/tmp/dpkg
-    done
+    find . -name '*.deb' -exec dpkg -x {} "$HOME/.beget/tmp/dpkg" \;
     
     echo_y "Setting up..."
     rsync -a $HOME/.beget/tmp/dpkg/usr/ $HOME/.local/
@@ -28,7 +24,7 @@ function apt_localinstall {
 }
 
 function check_d {
-    if [ `cat /proc/self/cgroup | grep cpuset | grep docker -c` -ne 1 ]
+    if [ "$(cat /proc/self/cgroup | grep cpuset | grep docker -c)" -ne 1 ]
     then
          echo_r "Please launch this script in docker"
          exit 1
@@ -36,7 +32,7 @@ function check_d {
 }
 
 function check_s {
-    if [ `whoami | grep _ -c` == 0 ]
+    if [ "$(whoami | grep _ -c)" == '0' ]
     then
         echo_r "Please launch this script in siteuser"
         exit 1
@@ -75,14 +71,14 @@ function echo_y {
 ==create common folders that we are will store temporary files and end result
 =
 function prepare_folders {
-  mkdir -p $HOME/.beget/tmp
-  mkdir -p $HOME/.local/opt
-  mkdir -p $HOME/.local/bin
+  mkdir -p "$HOME"/.beget/tmp
+  mkdir -p "$HOME"/.local/opt
+  mkdir -p "$HOME"/.local/bin
 
-  rm -rf $HOME/.beget/tmp/*
-  rm -rf $HOME/.beget/tmp/.*
+  rm -rf "$HOME"/.beget/tmp/*
+  rm -rf "$HOME"/.beget/tmp/.*
 
-  cd $HOME/.beget/tmp
+  cd "$HOME/.beget/tmp" || exit
 }
 
 
@@ -157,8 +153,8 @@ function install_from_pecl {
         exit 1
     fi
 
-    ext_name=`/usr/local/php-cgi/5.6/bin/php -r '$a=explode("-",$argv[1]);print_r($a[0]);' $1`
-    ext_ver=`/usr/local/php-cgi/5.6/bin/php -r '$a=explode("-",$argv[1]);print_r(pathinfo($a[1])["filename"]);' $1`
+    ext_name=$(/usr/local/php-cgi/5.6/bin/php -r '$a=explode("-",$argv[1]);print_r($a[0]);' $1)
+    ext_ver=$(/usr/local/php-cgi/5.6/bin/php -r '$a=explode("-",$argv[1]);print_r(pathinfo($a[1])["filename"]);' $1)
 
     prepare folders
     echo_y "Preparing folders..."
@@ -166,7 +162,7 @@ function install_from_pecl {
 
     #download
     echo_y "Downloading..."
-    cd $HOME/.beget/tmp
+    cd $HOME/.beget/tmp || exit
     curl -Lk "https://pecl.php.net/get/$1" > $1
     if [ ! -f "$HOME/.beget/tmp/$1" ]
     then
@@ -187,15 +183,15 @@ function install_from_pecl {
     echo_y "Compilating..."
     PATH=$PATH:/usr/local/php-cgi/$2/bin/
 
-    mkdir -p $HOME/.local/lib/php/$2/
+    mkdir -p "$HOME/.local/lib/php/$2/"
     
-    cd "$HOME/.beget/tmp/$ext_name-$ext_ver"
+    cd "$HOME/.beget/tmp/$ext_name-$ext_ver" || exit
     phpize
-    ./configure --prefix=$HOME/.local/lib/php/$2/
+    ./configure --prefix="$HOME/.local/lib/php/$2/"
     make
     make install #ignore fail
     
-    cp -f "$HOME/.beget/tmp/$ext_name-$ext_ver/modules/$ext_name.so" $HOME/.local/lib/php/$2/
+    cp -f "$HOME/.beget/tmp/$ext_name-$ext_ver/modules/$ext_name.so" "$HOME/.local/lib/php/$2/"
 
     if [ ! -f "$HOME/.local/lib/php/$2/$ext_name.so" ]
     then
@@ -239,7 +235,7 @@ function install_asciidoc {
 
     #cloning
     echo_y "Cloning..."
-    cd $HOME/.beget/tmp
+    cd $HOME/.beget/tmp || exit
     git clone https://github.com/asciidoc/asciidoc.git
     if [ ! -d "$HOME/.beget/tmp/asciidoc" ]
     then
@@ -249,7 +245,7 @@ function install_asciidoc {
     
     #compilation
     echo_y "Compilating..."
-    cd asciidoc
+    cd asciidoc || exit
     autoconf
     ./configure --prefix=$HOME/.local
     sed -i 's/\-\-nonet\s\-\-noout/\-\-noout/g' ./a2x.py
@@ -282,12 +278,12 @@ function install_composer {
     #install
     echo_y "Installing..."
     mkdir $HOME/.local/opt/composer/
-    cd $HOME/.local/opt/composer/
+    cd "$HOME/.local/opt/composer/" || exit
     curl -sS https://getcomposer.org/installer | /usr/local/php-cgi/5.6/bin/php
     if [ -f "$HOME/.local/opt/composer/composer.phar" ]
     then
         echo "/usr/local/php-cgi/5.6/bin/php -dshort_open_tag=On -ddate.timezone='Europe/Moscow' $HOME/.local/opt/composer/composer.phar \$@" > $HOME/.local/bin/composer
-        chmod +x $HOME/.local/bin/composer
+        chmod +x "$HOME/.local/bin/composer"
         composer config -g github-oauth.github.com  3f1c1a81d81f714de917e068b309e76df908cadf
     else
         echo_r "Seems like downloading is failed"
@@ -318,10 +314,10 @@ function install_cwebp {
 
     #compile
     echo_y "Compiling..."
-    cd $HOME/.beget/tmp/libwebp
+    cd "$HOME/.beget/tmp/libwebp" || exit
     ./autogen.sh
     ./configure --prefix=$HOME/.local
-    make -j $(expr $(nproc) / 21)
+    make -j "$(expr $(nproc) / 21)"
     make install
     if [ ! -f "$HOME/.local/bin/cwebp" ]
     then
@@ -353,8 +349,8 @@ function install_django {
     pip3 install django --user --ignore-installed
 
     echo_y "Creating project..."
-    cd $HOME
-    $HOME/.local/bin/python3 $HOME/.local/bin/django-admin.py startproject HelloDjango --verbosity 3
+    cd "$HOME" || exit
+    "$HOME/.local/bin/python3" "$HOME/.local/bin/django-admin.py" startproject HelloDjango --verbosity 3
 
     echo_y "Setting up..."
     echo "# -*- coding: utf-8 -*-
